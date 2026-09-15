@@ -75,9 +75,14 @@ def _connect_worker(generation):
 
     c.on_connect=on_connect;c.on_subscribe=on_subscribe;c.on_message=on_message;c.on_connect_fail=on_connect_fail
     client=c
-    _set("CONNECTING",None,"TCP OK → MQTT CONNECT")
+    _set("CONNECTING",None,"TCP OK → MQTT CONNECT (verified blocking flow)")
     try:
-        c.connect_async(host,port,keepalive=30);c.loop_start()
+        # Use the same connect path that the diagnostic client has proven works.
+        rc=c.connect(host,port,keepalive=30)
+        if rc!=mqtt.MQTT_ERR_SUCCESS:
+            _set("CONNECTION_ERROR",f"connect() returnerade {rc}","MQTT CONNECT FAILED")
+            return
+        c.loop_start()
         if not connected.wait(8) and generation==connect_generation:
             _set("MQTT_TIMEOUT","Ingen CONNACK inom 8 sekunder.","MQTT CONNECT TIMEOUT")
             return
