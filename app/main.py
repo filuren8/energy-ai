@@ -8,17 +8,18 @@ import paho.mqtt.client as mqtt
 from .mqtt_client import start_mqtt, reconnect_background
 from .state import snapshot
 from .config import load_config, save_config
+from .prices import start as start_prices, snapshot as price_snapshot, refresh as refresh_prices
 
 mqtt_client=None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global mqtt_client
-    mqtt_client=start_mqtt(); yield
+    mqtt_client=start_mqtt(); start_prices(); yield
     if mqtt_client:
         try: mqtt_client.loop_stop()
         except Exception: pass
 
-app=FastAPI(title="Energy AI",version="0.15.0",lifespan=lifespan)
+app=FastAPI(title="Energy AI",version="0.16.0",lifespan=lifespan)
 
 class ConfigIn(BaseModel):
     mqtt_host:str
@@ -29,6 +30,12 @@ class ConfigIn(BaseModel):
 
 @app.get("/api/state")
 def api_state(): return snapshot()
+
+@app.get("/api/prices")
+def api_prices(): return price_snapshot()
+
+@app.post("/api/prices/refresh")
+def api_prices_refresh(): refresh_prices(); return price_snapshot()
 
 @app.get("/api/config")
 def get_config():
