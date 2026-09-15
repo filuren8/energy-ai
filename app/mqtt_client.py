@@ -59,7 +59,14 @@ def reconnect():
     _set_status("CONNECTING",None,"TCP OK → MQTT 3.1.1 CONNECT (clean session, username/password)")\n    try:\n        # Ferroamp Rev E only specifies standard MQTT + user/password on 1883.\n        # Use a blocking socket connect so protocol errors surface deterministically.\n        rc=client.connect(host,port,keepalive=30)\n        if rc!=mqtt.MQTT_ERR_SUCCESS:\n            _set_status("CONNECTION_ERROR",f"MQTT connect() returnerade {rc}","MQTT CONNECT FAILED"); return client\n        client.loop_start();threading.Thread(target=_watchdog,args=(generation,),daemon=True).start()
     except Exception as e:_set_status("CONNECTION_ERROR",str(e),"MQTT CONNECT FAILED")
     return client
+def reconnect_background():
+    # Never let a slow/non-responsive MQTT broker block the web UI.
+    threading.Thread(target=reconnect, daemon=True, name="mqtt-connect").start()
+    return None
+
 def start_mqtt():
     cfg=load_config()
-    if not cfg.get("mqtt_username"):_set_status("NOT_CONFIGURED","Fyll i Ferroamp-användarnamn och lösenord.","WAITING FOR SETTINGS");return None
-    return reconnect()
+    if not cfg.get("mqtt_username"):
+        _set_status("NOT_CONFIGURED","Fyll i Ferroamp-användarnamn och lösenord.","WAITING FOR SETTINGS")
+        return None
+    return reconnect_background()
