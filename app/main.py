@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-import sys, time
+import sys, time, socket, ssl, json
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+import paho.mqtt.client as mqtt
 from .mqtt_client import start_mqtt, reconnect_background
 from .state import snapshot
 from .config import load_config, save_config
@@ -49,3 +50,44 @@ def set_config(x:ConfigIn):
 def dashboard():
     base=Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parents[1]))
     return (base/"app"/"static"/"index.html").read_text(encoding="utf-8")
+
+
+@app.post("/api/ferroamp-diagnostics")
+def ferroamp_diagnostics():
+    cfg=load_config()
+    host=cfg["mqtt_host"]; user=cfg.get("mqtt_username",""); password=cfg.get("mqtt_password","")
+    tests=[
+        ("MQTT 3.1.1 / 1883 / empty client-id",1883,mqtt.MQTTv311,"",False),
+        ("MQTT 3.1.1 / 1883 / named client-id",1883,mqtt.MQTTv311,"energy-ai-diag",False),
+        ("MQTT 3.1 / 1883 / named client-id",1883,mqtt.MQTTv31,"energy-ai-diag",False),
+        ("MQTT 3.1.1 / 8883 / TLS",8883,mqtt.MQTTv311,"energy-ai-diag",True),
+    ]
+    results=[]
+    for name,port,proto,cid,use_tls in tests:
+        row={"name":name,"port":port,"tcp":False,"mqtt":False,"data":False,"detail":""}
+        try:
+            with socket.create_connection((host,port),timeout=3): row["tcp"]=True
+        except Exception as e:
+            row["detail"]=f"TCP: {type(e).__name__}: {e}"; results.append(row); continue
+        connected=threading.Event(); got_data=threading.Event(); outcome={"detail":"No CONNACK"}
+        try:
+            c=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id=cid,protocol=proto)
+            if user:c.username_pw_set(user,password)
+            if use_tls:
+                c.tls_set(cert_reqs=ssl.CERT_NONE); c.tls_insecure_set(True)
+            def oc(client,userdata,flags,reason_code,properties):
+                outcome["detail"]=f"CONNACK {reason_code}"
+                if int(reason_code)==0:
+                    row["mqtt"]=True; client.subscribe("extapi/data/ehub")
+                connected.set()
+            def om(client,userdata,msg):
+                row["data"]=True; outcome["detail"]+=f"; DATA {len(msg.payload)} bytes"; got_data.set()
+            c.on_connect=oc;c.on_message=om
+            c.connect_async(host,port,keepalive=15);c.loop_start()
+            connected.wait(5)
+            if row["mqtt"]:got_data.wait(3)
+            c.disconnect();c.loop_stop()
+            row["detail"]=outcome["detail"]
+        except Exception as e:row["detail"]=f"MQTT: {type(e).__name__}: {e}"
+        results.append(row)
+    return {"host":host,"topic":"extapi/data/ehub","results":results}
