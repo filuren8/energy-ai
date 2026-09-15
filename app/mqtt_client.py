@@ -35,7 +35,7 @@ def _connect_worker(generation):
 
     def on_connect(cl,userdata,flags,reason_code,properties):
         if generation!=connect_generation:return
-        if int(reason_code)==0:
+        if reason_code.value == 0:
             _set("SUBSCRIBING",None,"CONNACK SUCCESS → SUBSCRIBE extapi/data/ehub")
             result,_=cl.subscribe(TOPIC,qos=0)
             if result!=mqtt.MQTT_ERR_SUCCESS:
