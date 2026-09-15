@@ -1,6 +1,5 @@
 import json, threading, time, urllib.parse, urllib.request
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 _lock=threading.Lock()
 _cache={"status":"LOADING","error":None,"area":"SE2","currency":"SEK","resolution_minutes":60,"updated":None,"prices":[],"plan":[]}
@@ -46,7 +45,7 @@ def _plan(prices):
     return out
 
 def refresh():
-    stockholm=ZoneInfo("Europe/Stockholm"); now=datetime.now(stockholm)
+    # Windows/PyInstaller may not bundle IANA tzdata. Use local system time; Energy AI runs at the installation site.\n    now=datetime.now().astimezone()
     try:
         rows=[]
         for d in (now.date(),(now+timedelta(days=1)).date()):
@@ -57,7 +56,7 @@ def refresh():
         upcoming=[]
         for r in rows:
             try:
-                dt=datetime.fromisoformat(str(r["start"]).replace("Z","+00:00")).astimezone(stockholm)
+                dt=datetime.fromisoformat(str(r["start"]).replace("Z","+00:00")).astimezone()
                 if dt>=now-timedelta(hours=1): upcoming.append({**r,"local":dt.isoformat()})
             except: pass
         upcoming=upcoming[:24]
