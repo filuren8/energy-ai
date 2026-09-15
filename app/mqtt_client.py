@@ -59,14 +59,19 @@ def _connect_worker(generation):
             payload=json.loads(raw); pload=_phases(payload,"pload"); pext=_phases(payload,"pext")
             load_kw=sum(pload.values()); grid_kw=sum(pext.values())
             peak=float(cfg["peak_limit_kw"]); maxp=float(cfg["max_power_kw"])
+            # V0.15 controller priority: peak shaving first. Never simulate export.
             discharge=min(max(0.0,grid_kw-peak),maxp,max(0.0,load_kw))
-            batt=battery.update(discharge); now=datetime.now(timezone.utc).isoformat()
+            batt=battery.update(discharge)
+            simulated_grid=max(0.0,grid_kw-batt["power_kw"])
+            action="PEAK SHAVING" if batt["power_kw"]>0.01 else "STANDBY"
+            now=datetime.now(timezone.utc).isoformat()
             with lock:
                 state.update({"mqtt_connected":True,"mqtt_status":"LIVE","mqtt_step":"RAW DATA RECEIVED → PARSED",
                   "mqtt_error":None,"messages":state["messages"]+1,"last_update":payload.get("ts",{}).get("val",now),
-                  "pload_kw":round(load_kw,3),"pext_kw":round(grid_kw,3),"pload_phases_kw":pload,
+                  "pload_kw":round(load_kw,3),"pext_kw":round(simulated_grid,3),"grid_actual_kw":round(grid_kw,3),
+                  "controller_action":action,"peak_shaving_active":action=="PEAK SHAVING","pload_phases_kw":pload,
                   "pext_phases_kw":pext,"battery":batt,"peak_limit_kw":peak})
-                state["history"].append({"t":now,"load":round(load_kw,3),"grid":round(grid_kw,3),"battery":batt["power_kw"],"soc":batt["soc"]})
+                state["history"].append({"t":now,"load":round(load_kw,3),"grid_actual":round(grid_kw,3),"grid":round(simulated_grid,3),"battery":batt["power_kw"],"soc":batt["soc"]})
         except Exception as e:
             _set("RAW_DATA",f"Rådata mottagen men kunde inte tolkas: {e}","RAW DATA RECEIVED → PARSE FAILED")
 
