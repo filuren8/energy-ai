@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller==6.16.0
+      - name: Build
+        run: pyinstaller EnergyAI.spec
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnergyAI-Windows
+          path: dist/EnergyAI.exe
+      - name: Publish latest development EXE
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: Energy AI - latest development build
+          prerelease: true
+          files: dist/EnergyAI.exe
