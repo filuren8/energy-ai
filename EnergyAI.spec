@@ -1,7 +1,7 @@
 # PyInstaller build specification
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = collect_submodules("uvicorn") + collect_submodules("paho") + collect_submodules("fastapi") + collect_submodules("pydantic")
+hiddenimports = collect_submodules("uvicorn") + collect_submodules("paho") + collect_submodules("fastapi") + collect_submodules("pydantic") + ["app.mqtt_client", "app.config", "app.state", "app.battery", "app.main"]
 a = Analysis(
     ["launcher.py"],
     pathex=[],
