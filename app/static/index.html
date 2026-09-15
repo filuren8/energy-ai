@@ -1,24 +1,13 @@
-<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Energy AI V0.1</title><style>
-body{font-family:system-ui;background:#0b1020;color:#eef2ff;margin:0}.wrap{max-width:1100px;margin:auto;padding:28px}
-h1{margin-bottom:4px}.sub{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:22px}
-.card{background:#151c31;border:1px solid #29324d;border-radius:14px;padding:18px}.big{font-size:34px;font-weight:700}.ok{color:#4ade80}.bad{color:#fb7185}
-table{width:100%;border-collapse:collapse}td{padding:8px;border-bottom:1px solid #29324d}.bar{height:12px;background:#29324d;border-radius:9px;overflow:hidden}.fill{height:100%;background:#a5b4fc}
-</style></head><body><div class="wrap"><h1>Energy AI <small>V0.1</small></h1><div class="sub">Ferroamp live + simulerat batteri</div>
-<div class="grid"><div class="card"><b>MQTT</b><div id="mqtt" class="big">…</div><span id="last"></span></div>
-<div class="card"><b>Husförbrukning</b><div id="load" class="big">0 kW</div><div id="lp"></div></div>
-<div class="card"><b>Nät</b><div id="grid" class="big">0 kW</div><div>Peakgräns: 10.0 kW</div></div>
-<div class="card"><b>Virtuellt batteri</b><div id="soc" class="big">50%</div><div class="bar"><div id="socbar" class="fill"></div></div><div id="bp"></div></div></div>
-<div class="card" style="margin-top:14px"><b>Debug / Live</b><table>
-<tr><td>Meddelanden</td><td id="messages"></td></tr><tr><td>L1/L2/L3 pload</td><td id="ploadp"></td></tr>
-<tr><td>L1/L2/L3 pext</td><td id="pextp"></td></tr><tr><td>Fel</td><td id="err"></td></tr></table></div>
-</div><script>
-const fmt=o=>['L1','L2','L3'].map(k=>k+': '+Number(o[k]).toFixed(2)+' kW').join(' · ');
-async function tick(){try{const s=await (await fetch('/api/state')).json();
-mqtt.textContent=s.mqtt_connected?'LIVE':'OFFLINE';mqtt.className='big '+(s.mqtt_connected?'ok':'bad');
-last.textContent=s.last_update||'Väntar på EnergyHub…';load.textContent=s.pload_kw.toFixed(2)+' kW';grid.textContent=s.pext_kw.toFixed(2)+' kW';
-lp.textContent=fmt(s.pload_phases_kw);soc.textContent=s.battery.soc.toFixed(1)+'%';socbar.style.width=s.battery.soc+'%';
-bp.textContent=(s.battery.power_kw>0?'Urladdar ':'Väntar ')+s.battery.power_kw.toFixed(2)+' kW';
-messages.textContent=s.messages;ploadp.textContent=fmt(s.pload_phases_kw);pextp.textContent=fmt(s.pext_phases_kw);err.textContent=s.mqtt_error||'—';
-}catch(e){mqtt.textContent='BACKEND OFFLINE';mqtt.className='big bad'}} setInterval(tick,1000);tick();
-</script></body></html>
+<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Energy AI V0.2</title>
+<style>body{font-family:system-ui;background:#0b1020;color:#eef2ff;margin:0}.wrap{max-width:1100px;margin:auto;padding:28px}h1{margin-bottom:4px}.sub{color:#94a3b8}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:22px}.card{background:#151c31;border:1px solid #29324d;border-radius:14px;padding:18px}.big{font-size:34px;font-weight:700}.ok{color:#4ade80}.bad{color:#fb7185}input{width:100%;box-sizing:border-box;padding:10px;margin:5px 0 12px;border-radius:8px;border:1px solid #3b4665;background:#0f172a;color:white}button{padding:11px 16px;border:0;border-radius:9px;font-weight:700;cursor:pointer}.bar{height:12px;background:#29324d;border-radius:9px;overflow:hidden}.fill{height:100%;background:#a5b4fc}table{width:100%;border-collapse:collapse}td{padding:8px;border-bottom:1px solid #29324d}</style></head>
+<body><div class="wrap"><h1>Energy AI <small>V0.2</small></h1><div class="sub">Ferroamp live + simulerat batteri</div>
+<div class="card" id="setup" style="margin-top:20px"><h2>Ferroamp-inställningar</h2><div class="grid">
+<div><label>EnergyHub IP</label><input id="host" value="192.168.68.59"><label>Port</label><input id="port" type="number" value="1883"></div>
+<div><label>Användarnamn</label><input id="user"><label>Lösenord</label><input id="pass" type="password" placeholder="Lämna tomt för att behålla sparat"></div>
+<div><label>Peakgräns kW</label><input id="peak" type="number" step=".1" value="10"><button onclick="save()">SPARA & TESTA ANSLUTNING</button><p id="saveMsg"></p></div></div></div>
+<div class="grid"><div class="card"><b>MQTT</b><div id="mqtt" class="big">…</div><span id="last"></span></div><div class="card"><b>Husförbrukning</b><div id="load" class="big">0 kW</div><div id="lp"></div></div><div class="card"><b>Nät</b><div id="grid" class="big">0 kW</div><div id="peakshow"></div></div><div class="card"><b>Virtuellt batteri</b><div id="soc" class="big">50%</div><div class="bar"><div id="socbar" class="fill"></div></div><div id="bp"></div></div></div>
+<div class="card" style="margin-top:14px"><b>Debug / Live</b><table><tr><td>Meddelanden</td><td id="messages"></td></tr><tr><td>L1/L2/L3 pload</td><td id="ploadp"></td></tr><tr><td>L1/L2/L3 pext</td><td id="pextp"></td></tr><tr><td>Fel</td><td id="err"></td></tr></table></div></div>
+<script>const fmt=o=>['L1','L2','L3'].map(k=>k+': '+Number(o[k]).toFixed(2)+' kW').join(' · ');
+async function cfg(){let c=await(await fetch('/api/config')).json();host.value=c.mqtt_host;port.value=c.mqtt_port;user.value=c.mqtt_username;peak.value=c.peak_limit_kw;if(c.has_password)pass.placeholder='•••••••• (sparat)'}
+async function save(){saveMsg.textContent='Ansluter…';await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mqtt_host:host.value,mqtt_port:+port.value,mqtt_username:user.value,mqtt_password:pass.value,peak_limit_kw:+peak.value})});pass.value='';setTimeout(()=>saveMsg.textContent=mqtt.textContent==='LIVE'?'✓ Ansluten till EnergyHub':'Kontrollerar anslutningen…',1500)}
+async function tick(){try{const s=await(await fetch('/api/state')).json();mqtt.textContent=s.mqtt_connected?'LIVE':'OFFLINE';mqtt.className='big '+(s.mqtt_connected?'ok':'bad');last.textContent=s.last_update||'Väntar på EnergyHub…';load.textContent=s.pload_kw.toFixed(2)+' kW';grid.textContent=s.pext_kw.toFixed(2)+' kW';lp.textContent=fmt(s.pload_phases_kw);peakshow.textContent='Peakgräns: '+s.peak_limit_kw.toFixed(1)+' kW';soc.textContent=s.battery.soc.toFixed(1)+'%';socbar.style.width=s.battery.soc+'%';bp.textContent=(s.battery.power_kw>0?'Urladdar ':'Väntar ')+s.battery.power_kw.toFixed(2)+' kW';messages.textContent=s.messages;ploadp.textContent=fmt(s.pload_phases_kw);pextp.textContent=fmt(s.pext_phases_kw);err.textContent=s.mqtt_error||'—'}catch(e){mqtt.textContent='BACKEND OFFLINE';mqtt.className='big bad'}}cfg();setInterval(tick,1000);tick();</script></body></html>
