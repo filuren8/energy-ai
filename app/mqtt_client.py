@@ -53,12 +53,10 @@ def reconnect():
         _set_status("TCP_OK",None,"TCP OK → MQTT CONNECT")
     except socket.timeout:_set_status("NETWORK_ERROR",f"Timeout mot {host}:{port}.","TCP FAILED");return None
     except OSError as e:_set_status("NETWORK_ERROR",f"Kan inte nå {host}:{port}: {e}","TCP FAILED");return None
-    client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id=f"energy-ai-{int(time.time())}",protocol=mqtt.MQTTv311)
+    client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id="",protocol=mqtt.MQTTv311)
     if cfg.get("mqtt_username"):client.username_pw_set(cfg["mqtt_username"],cfg.get("mqtt_password",""))
     client.on_connect=on_connect;client.on_connect_fail=on_connect_fail;client.on_subscribe=on_subscribe;client.on_disconnect=on_disconnect;client.on_message=on_message
-    _set_status("CONNECTING",None,"TCP OK → MQTT CONNECT")
-    try:
-        client.connect_async(host,port,keepalive=30);client.loop_start();threading.Thread(target=_watchdog,args=(generation,),daemon=True).start()
+    _set_status("CONNECTING",None,"TCP OK → MQTT 3.1.1 CONNECT (clean session, username/password)")\n    try:\n        # Ferroamp Rev E only specifies standard MQTT + user/password on 1883.\n        # Use a blocking socket connect so protocol errors surface deterministically.\n        rc=client.connect(host,port,keepalive=30)\n        if rc!=mqtt.MQTT_ERR_SUCCESS:\n            _set_status("CONNECTION_ERROR",f"MQTT connect() returnerade {rc}","MQTT CONNECT FAILED"); return client\n        client.loop_start();threading.Thread(target=_watchdog,args=(generation,),daemon=True).start()
     except Exception as e:_set_status("CONNECTION_ERROR",str(e),"MQTT CONNECT FAILED")
     return client
 def start_mqtt():
