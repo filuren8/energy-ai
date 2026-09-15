@@ -1,18 +1,30 @@
-import os
-from dotenv import load_dotenv
-load_dotenv()
+import json, os, sys
+from pathlib import Path
 
-class Settings:
-    mqtt_host = os.getenv("FERROAMP_HOST", "192.168.68.59")
-    mqtt_port = int(os.getenv("FERROAMP_PORT", "1883"))
-    mqtt_username = os.getenv("FERROAMP_USERNAME", "")
-    mqtt_password = os.getenv("FERROAMP_PASSWORD", "")
-    capacity_kwh = float(os.getenv("BATTERY_CAPACITY_KWH", "15"))
-    max_power_kw = float(os.getenv("BATTERY_MAX_POWER_KW", "5"))
-    min_soc = float(os.getenv("BATTERY_MIN_SOC", "10"))
-    max_soc = float(os.getenv("BATTERY_MAX_SOC", "95"))
-    initial_soc = float(os.getenv("BATTERY_INITIAL_SOC", "50"))
-    efficiency = float(os.getenv("BATTERY_EFFICIENCY", "0.95"))
-    peak_limit_kw = float(os.getenv("PEAK_LIMIT_KW", "10"))
+def app_dir():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path.cwd()
 
-settings = Settings()
+CONFIG_PATH = app_dir() / "energyai-config.json"
+
+DEFAULTS = {
+    "mqtt_host": "192.168.68.59", "mqtt_port": 1883, "mqtt_username": "", "mqtt_password": "",
+    "capacity_kwh": 15.0, "max_power_kw": 5.0, "min_soc": 10.0, "max_soc": 95.0,
+    "initial_soc": 50.0, "efficiency": 0.95, "peak_limit_kw": 10.0
+}
+
+def load_config():
+    data = DEFAULTS.copy()
+    if CONFIG_PATH.exists():
+        try:
+            data.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+        except Exception:
+            pass
+    return data
+
+def save_config(values):
+    data = load_config()
+    data.update(values)
+    CONFIG_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return data
