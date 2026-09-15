@@ -77,7 +77,7 @@ def ferroamp_diagnostics():
                 c.tls_set(cert_reqs=ssl.CERT_NONE); c.tls_insecure_set(True)
             def oc(client,userdata,flags,reason_code,properties):
                 outcome["detail"]=f"CONNACK {reason_code}"
-                if int(reason_code)==0:
+                if reason_code.value == 0:
                     row["mqtt"]=True
                     client.subscribe("extapi/data/ehub")
                 connected.set()
