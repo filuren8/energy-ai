@@ -45,7 +45,7 @@ def _plan(prices):
     return out
 
 def refresh():
-    # Windows/PyInstaller may not bundle IANA tzdata. Use local system time; Energy AI runs at the installation site.\n    now=datetime.now().astimezone()
+    # Windows/PyInstaller: use the PC local timezone; no external tzdata package needed.\n    now=datetime.now().astimezone()
     try:
         rows=[]
         for d in (now.date(),(now+timedelta(days=1)).date()):
