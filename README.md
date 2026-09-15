@@ -11,19 +11,23 @@ Windows-prototyp för live-data från Ferroamp EnergyHub via External API/MQTT o
 - Ingen styrning skickas till Ferroamp i V0.1
 - Lokal dashboard: http://localhost:8000
 
-## Windows
-1. Installera Python 3.11+.
-2. Ladda ned/klona repot.
-3. Dubbelklicka `run.bat`.
-4. Första körningen skapar `.env`. Stäng programmet.
-5. Öppna `.env` och fyll i `FERROAMP_USERNAME` och `FERROAMP_PASSWORD`.
-6. Kör `run.bat` igen.
-7. Dashboarden öppnas på localhost.
+## Kör som Windows-EXE (ingen Python behövs)
+GitHub Actions bygger automatiskt `EnergyAI.exe` på en Windows-runner. Hämta senaste development release från repo-sidan under Releases, packa vid behov upp artifacten och kör `EnergyAI.exe`.
 
-Datorn måste vara på samma LAN som EnergyHub.
+Vid första testet behöver programmet fortfarande en lokal `.env` i samma arbetsmapp med:
+```
+FERROAMP_HOST=192.168.68.59
+FERROAMP_PORT=1883
+FERROAMP_USERNAME=ditt_anvandarnamn
+FERROAMP_PASSWORD=ditt_losenord
+```
+Datorn måste vara på samma LAN som EnergyHub. Credentials ska aldrig committas till GitHub.
+
+## Bygg själv
+Om du vill bygga EXE lokalt kan du köra `build_exe.bat`. Python krävs endast på datorn som bygger programmet, inte på datorn som kör den färdiga EXE-filen.
 
 ## Säkerhet
-Credentials ligger endast i lokal `.env`, som ignoreras av Git. V0.1 prenumererar endast på mätdata och publicerar inga styrkommandon till EnergyHub.
+`.env` ignoreras av Git. V0.1 prenumererar endast på mätdata och publicerar inga styrkommandon till EnergyHub.
 
 ## Nästa steg
 Verifiera tecken/riktning för `pload` och `pext` på den verkliga installationen. Därefter: SE2-priser, historik, lastprognos, 24h-optimerare, self-use och prisstyrning.
