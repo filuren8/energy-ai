@@ -1,7 +1,7 @@
 # PyInstaller build specification
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = collect_submodules("uvicorn")
+hiddenimports = collect_submodules("uvicorn") + collect_submodules("paho") + collect_submodules("fastapi") + collect_submodules("pydantic")
 a = Analysis(
     ["launcher.py"],
     pathex=[],
@@ -21,6 +21,6 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=True,
 )
