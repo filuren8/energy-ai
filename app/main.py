@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
         try: mqtt_client.loop_stop()
         except Exception: pass
 
-app=FastAPI(title="Energy AI",version="0.2.0",lifespan=lifespan)
+app=FastAPI(title="Energy AI",version="0.15.0",lifespan=lifespan)
 
 class ConfigIn(BaseModel):
     mqtt_host:str
