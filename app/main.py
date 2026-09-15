@@ -78,7 +78,8 @@ def ferroamp_diagnostics():
             def oc(client,userdata,flags,reason_code,properties):
                 outcome["detail"]=f"CONNACK {reason_code}"
                 if int(reason_code)==0:
-                    row["mqtt"]=True; client.subscribe("extapi/data/ehub")
+                    row["mqtt"]=True
+                    client.subscribe("extapi/data/ehub")
                 connected.set()
             def om(client,userdata,msg):
                 row["data"]=True; outcome["detail"]+=f"; DATA {len(msg.payload)} bytes"; got_data.set()
