@@ -21,6 +21,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller==6.16.0
+      - name: Validate source imports
+        run: |
+          python -m py_compile app/mqtt_client.py app/main.py app/config.py app/state.py app/battery.py launcher.py
+          python -c "import app.mqtt_client; import app.main; print('SOURCE IMPORT OK')"
       - name: Build
         run: pyinstaller EnergyAI.spec
       - name: Upload EXE artifact
