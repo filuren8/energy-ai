@@ -42,23 +42,50 @@ def _watchdog(generation):
         with lock:status2=state.get("mqtt_status")
         if status2 in ("SUBSCRIBING","WAITING_DATA"):_set_status("NO_DATA",f"MQTT ansluten men ingen data mottogs på {TOPIC}.","MQTT OK → NO DATA")
 def reconnect():
-    global client,connect_generation
-    cfg=load_config(); host=cfg["mqtt_host"]; port=int(cfg["mqtt_port"]); connect_generation+=1; generation=connect_generation
+    global client, connect_generation
+    cfg = load_config()
+    host = cfg["mqtt_host"]
+    port = int(cfg["mqtt_port"])
+    connect_generation += 1
+    generation = connect_generation
     if client:
-        try:client.disconnect();client.loop_stop()
-        except Exception:pass
-    _set_status("TESTING",None,f"TCP TEST {host}:{port}")
+        try:
+            client.disconnect()
+            client.loop_stop()
+        except Exception:
+            pass
+    _set_status("TESTING", None, f"TCP TEST {host}:{port}")
     try:
-        with socket.create_connection((host,port),timeout=4):pass
-        _set_status("TCP_OK",None,"TCP OK → MQTT CONNECT")
-    except socket.timeout:_set_status("NETWORK_ERROR",f"Timeout mot {host}:{port}.","TCP FAILED");return None
-    except OSError as e:_set_status("NETWORK_ERROR",f"Kan inte nå {host}:{port}: {e}","TCP FAILED");return None
-    client=mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,client_id="",protocol=mqtt.MQTTv311)
-    if cfg.get("mqtt_username"):client.username_pw_set(cfg["mqtt_username"],cfg.get("mqtt_password",""))
-    client.on_connect=on_connect;client.on_connect_fail=on_connect_fail;client.on_subscribe=on_subscribe;client.on_disconnect=on_disconnect;client.on_message=on_message
-    _set_status("CONNECTING",None,"TCP OK → MQTT 3.1.1 CONNECT (clean session, username/password)")\n    try:\n        # Ferroamp Rev E only specifies standard MQTT + user/password on 1883.\n        # Use a blocking socket connect so protocol errors surface deterministically.\n        rc=client.connect(host,port,keepalive=30)\n        if rc!=mqtt.MQTT_ERR_SUCCESS:\n            _set_status("CONNECTION_ERROR",f"MQTT connect() returnerade {rc}","MQTT CONNECT FAILED"); return client\n        client.loop_start();threading.Thread(target=_watchdog,args=(generation,),daemon=True).start()
-    except Exception as e:_set_status("CONNECTION_ERROR",str(e),"MQTT CONNECT FAILED")
+        with socket.create_connection((host, port), timeout=4):
+            pass
+        _set_status("TCP_OK", None, "TCP OK → MQTT CONNECT")
+    except socket.timeout:
+        _set_status("NETWORK_ERROR", f"Timeout mot {host}:{port}.", "TCP FAILED")
+        return None
+    except OSError as e:
+        _set_status("NETWORK_ERROR", f"Kan inte nå {host}:{port}: {e}", "TCP FAILED")
+        return None
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="", protocol=mqtt.MQTTv311)
+    if cfg.get("mqtt_username"):
+        client.username_pw_set(cfg["mqtt_username"], cfg.get("mqtt_password", ""))
+    client.on_connect = on_connect
+    client.on_connect_fail = on_connect_fail
+    client.on_subscribe = on_subscribe
+    client.on_disconnect = on_disconnect
+    client.on_message = on_message
+    _set_status("CONNECTING", None, "TCP OK → MQTT 3.1.1 CONNECT")
+    try:
+        rc = client.connect(host, port, keepalive=30)
+        if rc != mqtt.MQTT_ERR_SUCCESS:
+            _set_status("CONNECTION_ERROR", f"MQTT connect() returnerade {rc}", "MQTT CONNECT FAILED")
+            return client
+        client.loop_start()
+        threading.Thread(target=_watchdog, args=(generation,), daemon=True).start()
+    except Exception as e:
+        _set_status("CONNECTION_ERROR", str(e), "MQTT CONNECT FAILED")
     return client
+
 def reconnect_background():
     # Never let a slow/non-responsive MQTT broker block the web UI.
     threading.Thread(target=reconnect, daemon=True, name="mqtt-connect").start()
