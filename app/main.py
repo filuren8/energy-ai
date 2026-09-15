@@ -4,7 +4,7 @@ import sys, time
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from .mqtt_client import start_mqtt, reconnect
+from .mqtt_client import start_mqtt, reconnect_background
 from .state import snapshot
 from .config import load_config, save_config
 
@@ -42,7 +42,7 @@ def set_config(x:ConfigIn):
     save_config({"mqtt_host":x.mqtt_host.strip(),"mqtt_port":x.mqtt_port,
                  "mqtt_username":x.mqtt_username.strip(),"mqtt_password":password,
                  "peak_limit_kw":x.peak_limit_kw})
-    reconnect()
+    reconnect_background()
     return {"ok":True}
 
 @app.get("/",response_class=HTMLResponse)
